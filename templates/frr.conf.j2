@@ -1,0 +1,64 @@
+! {{ ansible_managed | default('Managed by Ansible') }}
+! Generated from inventory/host_vars/{{ inventory_hostname }}.yml - do not edit by hand
+frr defaults traditional
+hostname {{ inventory_hostname }}
+log stdout
+service integrated-vtysh-config
+!
+interface lo
+ ip address {{ loopback }}
+{% if ospf is defined %}
+ ip ospf area {{ ospf.area }}
+{% endif %}
+exit
+!
+{% for intf in interfaces %}
+interface {{ intf.name }}
+ description {{ intf.description }}
+ ip address {{ intf.ip }}
+{% if intf.ospf | default(false) %}
+ ip ospf area {{ ospf.area }}
+ ip ospf network point-to-point
+ ip ospf hello-interval 1
+ ip ospf dead-interval 4
+{% endif %}
+exit
+!
+{% endfor %}
+{% if ospf is defined %}
+router ospf
+ ospf router-id {{ router_id }}
+exit
+!
+{% endif %}
+{% if bgp is defined %}
+router bgp {{ bgp.asn }}
+ bgp router-id {{ router_id }}
+ no bgp ebgp-requires-policy
+ no bgp network import-check
+ timers bgp 3 9
+{% for n in bgp.neighbors %}
+ neighbor {{ n.ip }} remote-as {{ n.remote_as }}
+ neighbor {{ n.ip }} description {{ n.description }}
+{% if n.update_source is defined %}
+ neighbor {{ n.ip }} update-source {{ n.update_source }}
+{% endif %}
+{% endfor %}
+ !
+ address-family ipv4 unicast
+{% for net in bgp.networks | default([]) %}
+  network {{ net }}
+{% endfor %}
+{% for n in bgp.neighbors %}
+{% if n.next_hop_self | default(false) %}
+  neighbor {{ n.ip }} next-hop-self
+{% endif %}
+{% if n.rr_client | default(false) %}
+  neighbor {{ n.ip }} route-reflector-client
+{% endif %}
+{% endfor %}
+ exit-address-family
+exit
+!
+{% endif %}
+end

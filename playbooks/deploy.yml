@@ -1,0 +1,40 @@
+---
+# Render each router's FRR configuration from the YAML source of truth,
+# copy it into the router container and apply it.
+- name: Deploy FRR configuration
+  hosts: all
+  connection: local
+  gather_facts: false
+  vars:
+    build_dir: "{{ playbook_dir }}/../build"
+    container: "{{ container_prefix }}{{ inventory_hostname }}"
+
+  tasks:
+    - name: Create the build directory
+      ansible.builtin.file:
+        path: "{{ build_dir }}"
+        state: directory
+        mode: "0755"
+      run_once: true
+
+    - name: Render the intended configuration
+      ansible.builtin.template:
+        src: ../templates/frr.conf.j2
+        dest: "{{ build_dir }}/{{ inventory_hostname }}.conf"
+        mode: "0644"
+
+    - name: Copy the configuration into the router
+      community.docker.docker_container_copy_into:
+        container: "{{ container }}"
+        path: "{{ build_dir }}/{{ inventory_hostname }}.conf"
+        container_path: /etc/frr/frr.conf
+        mode: 0644
+      notify: Apply configuration
+
+  handlers:
+    # frr-reload.py applies only the differences; vtysh -b is the fallback.
+    - name: Apply configuration
+      community.docker.docker_container_exec:
+        container: "{{ container }}"
+        command: >-
+          sh -c '/usr/lib/frr/frr-reload.py --reload /etc/frr/frr.conf || vtysh -b'

@@ -1,0 +1,24 @@
+# Provider edge 2: faces customer ce2
+router_id: 10.255.0.3
+loopback: 10.255.0.3/32
+interfaces:
+  - name: eth1
+    description: to-p1
+    ip: 10.0.23.2/30
+    ospf: true
+  - name: eth2
+    description: to-ce2
+    ip: 192.168.2.1/30
+ospf:
+  area: 0
+bgp:
+  asn: 65000
+  neighbors:
+    - ip: 10.255.0.2
+      remote_as: 65000
+      description: p1-route-reflector
+      update_source: lo
+      next_hop_self: true
+    - ip: 192.168.2.2
+      remote_as: 65002
+      description: customer-ce2

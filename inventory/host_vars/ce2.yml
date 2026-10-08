@@ -1,0 +1,15 @@
+# Customer site 2: announces its LAN (loopback) to the provider
+router_id: 172.16.2.1
+loopback: 172.16.2.1/32
+interfaces:
+  - name: eth1
+    description: to-pe2
+    ip: 192.168.2.2/30
+bgp:
+  asn: 65002
+  networks:
+    - 172.16.2.1/32
+  neighbors:
+    - ip: 192.168.2.1
+      remote_as: 65000
+      description: provider-pe2

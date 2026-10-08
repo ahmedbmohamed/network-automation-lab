@@ -1,0 +1,30 @@
+---
+# Save the running configuration of every router into backups/.
+- name: Back up running configurations
+  hosts: all
+  connection: local
+  gather_facts: false
+  vars:
+    backup_dir: "{{ playbook_dir }}/../backups"
+    container: "{{ container_prefix }}{{ inventory_hostname }}"
+
+  tasks:
+    - name: Create the backup directory
+      ansible.builtin.file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: "0755"
+      run_once: true
+
+    - name: Read the running configuration
+      community.docker.docker_container_exec:
+        container: "{{ container }}"
+        command: vtysh -c "show running-config"
+      register: running
+      changed_when: false
+
+    - name: Write the backup file
+      ansible.builtin.copy:
+        content: "{{ running.stdout }}\n"
+        dest: "{{ backup_dir }}/{{ inventory_hostname }}.conf"
+        mode: "0644"

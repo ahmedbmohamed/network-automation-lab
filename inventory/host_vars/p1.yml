@@ -1,0 +1,27 @@
+# Core router and iBGP route reflector
+router_id: 10.255.0.2
+loopback: 10.255.0.2/32
+interfaces:
+  - name: eth1
+    description: to-pe1
+    ip: 10.0.12.2/30
+    ospf: true
+  - name: eth2
+    description: to-pe2
+    ip: 10.0.23.1/30
+    ospf: true
+ospf:
+  area: 0
+bgp:
+  asn: 65000
+  neighbors:
+    - ip: 10.255.0.1
+      remote_as: 65000
+      description: pe1-rr-client
+      update_source: lo
+      rr_client: true
+    - ip: 10.255.0.3
+      remote_as: 65000
+      description: pe2-rr-client
+      update_source: lo
+      rr_client: true

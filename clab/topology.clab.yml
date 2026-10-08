@@ -1,0 +1,31 @@
+# Containerlab topology: a small carrier backbone
+#
+#   ce1 --- pe1 --- p1 --- pe2 --- ce2
+#  AS65001        AS65000          AS65002
+#
+# pe1, p1, pe2 run OSPF area 0 and iBGP (p1 is the route reflector).
+# ce1 and ce2 are customer routers peering eBGP with their PE.
+name: netlab
+
+topology:
+  defaults:
+    kind: linux
+    image: quay.io/frrouting/frr:9.1.0
+    binds:
+      - daemons:/etc/frr/daemons
+      - vtysh.conf:/etc/frr/vtysh.conf
+    exec:
+      - sysctl -w net.ipv4.ip_forward=1
+
+  nodes:
+    ce1: {}
+    pe1: {}
+    p1: {}
+    pe2: {}
+    ce2: {}
+
+  links:
+    - endpoints: ["ce1:eth1", "pe1:eth1"]
+    - endpoints: ["pe1:eth2", "p1:eth1"]
+    - endpoints: ["p1:eth2", "pe2:eth1"]
+    - endpoints: ["pe2:eth2", "ce2:eth1"]

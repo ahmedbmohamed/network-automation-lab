@@ -1,0 +1,98 @@
+name: Network lab CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: lab-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and offline tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install tools
+        run: |
+          pip install -r requirements.txt
+          ansible-galaxy collection install -r requirements.yml
+      - name: YAML lint
+        run: yamllint .
+      - name: Ansible syntax check
+        run: |
+          ansible-playbook --syntax-check playbooks/deploy.yml
+          ansible-playbook --syntax-check playbooks/backup.yml
+      - name: Template and data tests (no Docker needed)
+        run: pytest tests/test_templates.py -v
+
+  lab:
+    name: Deploy lab, configure and validate
+    needs: lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install tools
+        run: |
+          pip install -r requirements.txt
+          ansible-galaxy collection install -r requirements.yml
+      - name: Install Containerlab
+        run: bash -c "$(curl -sL https://get.containerlab.dev)"
+
+      - name: Deploy the topology
+        run: sudo containerlab deploy -t clab/topology.clab.yml
+
+      - name: Configure all routers with Ansible
+        run: ansible-playbook playbooks/deploy.yml
+
+      - name: Idempotency check (second run must change nothing)
+        run: |
+          ansible-playbook playbooks/deploy.yml | tee second-run.log
+          if grep -E "changed=[1-9]" second-run.log; then
+            echo "Second run changed something: playbook is not idempotent"
+            exit 1
+          fi
+
+      - name: Validate OSPF, BGP and end-to-end reachability
+        run: pytest tests/test_network.py -v
+
+      - name: Show routing state
+        if: always()
+        run: |
+          for r in pe1 p1 pe2; do
+            echo "===== $r: OSPF neighbours ====="
+            docker exec clab-netlab-$r vtysh -c "show ip ospf neighbor" || true
+          done
+          for r in ce1 pe1 p1 pe2 ce2; do
+            echo "===== $r: BGP summary ====="
+            docker exec clab-netlab-$r vtysh -c "show bgp summary" || true
+          done
+          echo "===== ce1: routing table ====="
+          docker exec clab-netlab-ce1 vtysh -c "show ip route" || true
+
+      - name: Back up running configurations
+        if: always()
+        run: ansible-playbook playbooks/backup.yml
+
+      - name: Upload configs and backups
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: router-configs
+          path: |
+            build/
+            backups/
+
+      - name: Destroy the topology
+        if: always()
+        run: sudo containerlab destroy -t clab/topology.clab.yml --cleanup
