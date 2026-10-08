@@ -71,6 +71,10 @@ pipeline before it reaches `main`.
 
 ![Green CI pipeline: lint and offline tests, then lab deployment and validation](docs/images/ci-green.png)
 
+The live network tests check OSPF neighbours, BGP sessions, learned customer routes and end-to-end ping (12 checks, all passing):
+
+![Network tests: 12 passed](docs/images/tests-passed.png)
+
 ## Run it yourself
 
 Requirements: Linux or WSL2 with Docker, Python 3.10+.
