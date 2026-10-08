@@ -80,8 +80,14 @@ jobs:
               ann("pytest", open("pytest.log").read())
           except OSError:
               pass
-          for host, cmd in [("pe1", "show ip ospf neighbor json"), ("pe1", "show bgp summary json"), ("ce1", "show bgp summary")]:
-              r = subprocess.run(["docker", "exec", f"clab-netlab-{host}", "vtysh", "-c", cmd], capture_output=True, text=True)
+          checks = [
+              ("pe1", "show ip ospf neighbor json"),
+              ("pe1", "show bgp summary json"),
+              ("ce1", "show bgp summary"),
+          ]
+          for host, cmd in checks:
+              argv = ["docker", "exec", f"clab-netlab-{host}", "vtysh", "-c", cmd]
+              r = subprocess.run(argv, capture_output=True, text=True)
               ann(f"{host}: {cmd}", r.stdout + r.stderr)
           PY
 
