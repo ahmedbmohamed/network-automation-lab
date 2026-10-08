@@ -75,6 +75,17 @@ The live network tests check OSPF neighbours, BGP sessions, learned customer rou
 
 ![Network tests: 12 passed](docs/images/tests-passed.png)
 
+Routing state captured by the pipeline after deployment:
+
+- OSPF: every core link has a neighbour in `Full` state.
+- BGP: iBGP sessions through the p1 route reflector, and eBGP sessions between the provider edge routers and the customers.
+- ce1 learns ce2's prefix (`172.16.2.1/32`) over BGP.
+
+![OSPF neighbours on pe1, p1 and pe2](docs/images/ospf-neighbors.png)
+![BGP summary on ce1 and pe1](docs/images/bgp-summary-1.png)
+![BGP summary on p1 and pe2](docs/images/bgp-summary-2.png)
+![ce2 BGP summary and ce1 routing table](docs/images/customer-routes.png)
+
 ## Run it yourself
 
 Requirements: Linux or WSL2 with Docker, Python 3.10+.
