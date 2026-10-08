@@ -69,6 +69,8 @@ On every push and pull request, `.github/workflows/ci.yml` runs two jobs:
 A pull request that breaks the design (wrong subnet, missing BGP neighbour, OSPF area mismatch) fails the
 pipeline before it reaches `main`.
 
+![Green CI pipeline: lint and offline tests, then lab deployment and validation](docs/images/ci-green.png)
+
 ## Run it yourself
 
 Requirements: Linux or WSL2 with Docker, Python 3.10+.
